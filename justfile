@@ -66,7 +66,7 @@ prodenv: requirements-prod
 # a killer feature over Makefiles.
 #
 # ensure dev requirements installed and up to date
-devenv: prodenv requirements-dev && install-precommit
+devenv: prodenv requirements-dev
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -75,15 +75,6 @@ devenv: prodenv requirements-dev && install-precommit
 
     $PIP install -r requirements.dev.txt
     touch $VIRTUAL_ENV/.dev
-
-
-# ensure precommit is installed
-install-precommit:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    BASE_DIR=$(git rev-parse --show-toplevel)
-    test -f $BASE_DIR/.git/hooks/pre-commit || $BIN/pre-commit install
 
 
 # upgrade dev or prod dependencies (specify package to upgrade single package, all by default)
@@ -103,14 +94,10 @@ test *args: devenv
     $BIN/coverage report || $BIN/coverage html
 
 
-black *args=".": devenv
-    $BIN/black --check {{ args }}
-
-ruff *args=".": devenv
-    $BIN/ruff check {{ args }}
-
-# run the various dev checks but does not change any files
-check: black ruff
+# lint and check formatting but don't modify anything
+check: devenv
+    $BIN/ruff format --diff --quiet .
+    $BIN/ruff check --output-format=full .
 
 
 # fix formatting and import sort ordering
@@ -122,7 +109,6 @@ fix: devenv
 # Run the dev project
 run: devenv
     echo "Not implemented yet"
-
 
 
 # Remove built assets and collected static files

@@ -1,5 +1,7 @@
 /.coverage*
 /.pytest-cache/
 /.venv/
-/__pycache__
+*/__pycache__
 /htmlcov
+/dist/
+/opentelemetry_opensafely.egg-info/

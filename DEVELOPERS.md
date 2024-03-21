@@ -21,14 +21,31 @@ just #  shortcut for just --list
 
 ## Local development environment
 
-
 Set up a local development environment with:
 ```
-just dev_setup
+just devenv
 ```
 
 ## Tests
 Run the tests with:
 ```
 just test <args>
+```
+
+## Building the package
+
+Test that the package builds
+
+```
+just package-test whl
+just package-test sdist
+```
+
+## Create a new release from current main
+
+This pulls `main`, checks out a new release branch, creates and commits a new
+`version` file, and opens a PR. Github actions will deal with tagging the new version.
+
+```
+just release
 ```

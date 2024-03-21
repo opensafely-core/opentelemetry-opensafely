@@ -42,7 +42,7 @@ _compile src dst *args: virtualenv
 
 # update requirements.prod.txt if requirements.prod.in has changed
 requirements-prod *args:
-    "{{ just_executable() }}" _compile requirements.prod.in requirements.prod.txt {{ args }}
+    "{{ just_executable() }}" _compile pyproject.toml requirements.prod.txt {{ args }}
 
 
 # update requirements.dev.txt if requirements.dev.in has changed
@@ -102,53 +102,50 @@ check: devenv
 
 # fix formatting and import sort ordering
 fix: devenv
-    $BIN/black .
+    $BIN/ruff format .
     $BIN/ruff --fix .
 
 
-# Run the dev project
-run: devenv
-    echo "Not implemented yet"
+package-build: virtualenv
+    rm -rf dist
 
+    $PIP install build
+    $BIN/python -m build
 
-# Remove built assets and collected static files
-assets-clean:
-    rm -rf assets/dist
-    rm -rf staticfiles
+package-test type: package-build
+    #!/usr/bin/env bash
+    VENV="test-{{ type }}"
+    distribution_suffix="{{ if type == "wheel" { "whl" } else { "tar.gz" } }}"
 
+    # build a fresh venv
+    python -m venv $VENV
 
-# Install the Node.js dependencies
-assets-install:
+    # clean up after ourselves, even if there are errors
+    trap 'rm -rf $VENV' EXIT
+
+    # ensure a modern pip
+    $VENV/bin/pip install pip --upgrade
+
+    # install the wheel distribution
+    $VENV/bin/pip install dist/*."$distribution_suffix"
+
+    # Minimal check that it has actually built correctly
+    $VENV/bin/python -c "import otel_opensafely.trace"
+
+    # check we haven't packaged tests with it
+    unzip -Z -1 dist/*.whl | grep -vq "^tests/"
+
+# Cut a release of this package
+release:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    # exit if lock file has not changed since we installed them. -nt == "newer than",
-    # but we negate with || to avoid error exit code
-    test package-lock.json -nt node_modules/.written || exit 0
+    CALVER=$(date -u +"%Y.%m.%d.%H%M%S")
 
-    npm ci
-    touch node_modules/.written
-
-
-# Build the Node.js assets
-assets-build:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    # find files which are newer than dist/.written in the src directory. grep
-    # will exit with 1 if there are no files in the result.  We negate this
-    # with || to avoid error exit code
-    # we wrap the find in an if in case dist/.written is missing so we don't
-    # trigger a failure prematurely
-    if test -f assets/dist/.written; then
-        find assets/src -type f -newer assets/dist/.written | grep -q . || exit 0
-    fi
-
-    npm run build
-    touch assets/dist/.written
-
-
-assets: assets-install assets-build
-
-
-assets-rebuild: assets-clean assets
+    git checkout main
+    git pull
+    git checkout -b release-$CALVER
+    echo $CALVER > version
+    git add version
+    git commit --message "Release $CALVER"
+    gh pr create --fill

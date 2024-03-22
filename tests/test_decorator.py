@@ -23,42 +23,66 @@ def test_instrument_decorator_with_name_and_attributes():
     assert current_span.attributes == {"foo": "bar"}
 
 
-def test_instrument_decorator_with_function_kwarg_attributes():
-    @instrument(kwarg_attributes={"number": "num"})
-    def assert_function_kwarg_attributes(*, num):
+@pytest.mark.parametrize(
+    "func_attributes,func_args,func_kwargs,expected_attributes",
+    [
+        # positional arg
+        ({"func_attributes": {"number": "num"}}, (1,), {}, {"number": "1"}),
+        # keyword arg
+        (
+            {"func_attributes": {"text": "string"}},
+            (1,),
+            {"string": "bar"},
+            {"text": "bar"},
+        ),
+        # default keyword arg
+        ({"func_attributes": {"text": "string"}}, (1,), {}, {"text": "Foo"}),
+        # all args passed as keywords
+        (
+            {"func_attributes": {"number": "num"}},
+            (),
+            {"num": 1, "string": "bar"},
+            {"number": "1"},
+        ),
+        # all args passed as positional
+        ({"func_attributes": {"number": "num"}}, (1, "bar"), {}, {"number": "1"}),
+        # multiple func attributes
+        (
+            {"func_attributes": {"number": "num", "text": "string"}},
+            (1,),
+            {},
+            {"number": "1", "text": "Foo"},
+        ),
+    ],
+)
+def test_instrument_decorator_with_function_attributes(
+    func_attributes, func_args, func_kwargs, expected_attributes
+):
+    @instrument(**func_attributes)
+    def assert_function_kwarg_attributes(num, string="Foo"):
         current_span = trace.get_current_span()
-        assert current_span.attributes == {"number": str(num)}
+        assert current_span.attributes == expected_attributes
+        return num, string
 
-    assert_function_kwarg_attributes(num=1)
-
-
-def test_instrument_decorator_with_function_arg_attributes():
-    @instrument(arg_attributes={"number": 0})
-    def assert_function_arg_attributes(num):
-        current_span = trace.get_current_span()
-        assert current_span.attributes == {"number": str(num)}
-
-    assert_function_arg_attributes(1)
+    assert_function_kwarg_attributes(*func_args, **func_kwargs)
 
 
 @pytest.mark.parametrize(
-    "instrument_params,expect_ok",
+    "func_kwargs,expect_ok",
     [
-        ({"kwarg_attributes": {"number": "foo"}}, False),
-        ({"arg_attributes": {"number": 1}}, False),
-        ({"arg_attributes": {"number": 0}}, True),
+        ({}, False),
+        ({"foo": 1}, False),
+        ({"bar": 1}, True),
     ],
 )
-def test_instrument_decorator_with_invalid_function_attributes(
-    instrument_params, expect_ok
-):
-    @instrument(**instrument_params)
-    def decorated_function(num):
+def test_instrument_decorator_with_unnamed_kwargs(func_kwargs, expect_ok):
+    @instrument(func_attributes={"foo": "bar"})
+    def decorated_function(**kwargs):
         current_span = trace.get_current_span()
-        assert current_span.attributes == {"number": str(num)}
+        assert current_span.attributes == {"foo": str(kwargs["bar"])}
 
     if expect_ok:
-        decorated_function(1)
+        decorated_function(**func_kwargs)
     else:
-        with pytest.raises(AssertionError, match="not found in function signature"):
-            decorated_function(1)
+        with pytest.raises(AttributeError, match="not found in function signature"):
+            decorated_function(**func_kwargs)

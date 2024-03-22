@@ -52,35 +52,34 @@ function below, we want to add an attribute with the value of "name",
 so we can filter traces by name.
 
 ```
-def say_hello(*, nm):
-  print(f"Hello {nm}")
-```
-
-To do this, use `kwarg_attributes`; a dict of k:v pairs, where
-k is the name of the attribute to add, and v is the keyword argument:
-
-```
-@instrument(kwarg_attrbutes={"name": "nm"})
-def say_hello(*, nm):
-  print(f"Hello {nm}")
-```
-
-Calling this function with `say_hello(nm="Bob")` will add the attribute
-`{"name": "Bob"}` to this span.
-
-Positional arguments can be added as attributes in a similar way, using
-`arg_attributes`; a dict of k:v pairs, in this case
-k is the name of the attribute to add, and v is the index of the
-positional argument to be use:
-
-```
-@instrument(arg_attrbutes={"name": 0})
 def say_hello(nm):
   print(f"Hello {nm}")
 ```
+
+To do this, use `func_attributes`; a dict of k:v pairs, where
+k is the name of the attribute to add, and v is the name of the parameter:
+
+```
+@instrument(func_attributes={"name": "nm"})
+def say_hello(nm):
+  print(f"Hello {nm}")
+```
+
 Calling this function with `say_hello("Bob")` will add the attribute
 `{"name": "Bob"}` to this span.
 
+`func_attributes` can refer to positional or keyword arguments, e.g.:
+
+```
+@instrument(func_attrbutes={"extra": "extra_greeting"})
+def say_hello(nm, extra_greeting=None):
+  print(f"Hello {nm}, {extra_greeting}")
+```
+Calling this function with `say_hello("Bob", extra_greeting="Howdy!")` will
+add the attribute `{"extra": "Howdy!"}` to this span.
+
+
+### Using an existing tracer
 An `existing_tracer` can be passed to the decorator, if one has been
 defined already; if not, a tracer is created, named with the `OTEL_SERVICE_NAME`
 environment variable, if it exists, or the function module.

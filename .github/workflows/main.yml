@@ -11,10 +11,13 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     runs-on: ubuntu-latest
+    
+    env:
+      PYTHON_VERSION: python${{ matrix.python-version }}
 
     steps:
       - uses: actions/checkout@v4
-      - uses: "opensafely-core/setup-action@v1"
+      - uses: "opensafely-core/setup-action@v1.2.0"
         with:
           python-version: ${{ matrix.python-version }}
           install-just: true
@@ -27,10 +30,13 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     runs-on: ubuntu-latest
+    
+    env:
+      PYTHON_VERSION: python${{ matrix.python-version }}
 
     steps:
       - uses: actions/checkout@v4
-      - uses: "opensafely-core/setup-action@v1"
+      - uses: "opensafely-core/setup-action@v1.2.0"
         with:
           python-version: ${{ matrix.python-version }}
           install-just: true
@@ -44,6 +50,9 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     runs-on: ubuntu-latest
+    
+    env:
+      PYTHON_VERSION: python${{ matrix.python-version }}
 
     name: Test we can build a Python package
     steps:
